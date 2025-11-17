@@ -51,7 +51,8 @@
 
     <script>
         /**
-         * テキストを処理し、指定されたパターンで始まる単語を削除します。
+         * テキストを処理し、特定のパターンで始まる単語、または特定文字列を含む単語を削除します。
+         * また、後者の条件に該当する単語を含む行は空行になります。
          */
         function processText() {
             // 1. 要素の取得
@@ -59,35 +60,58 @@
             const outputTextarea = document.getElementById('outputText');
             const originalText = inputTextarea.value;
 
-            // 2. 削除するパターンの定義
-            // ユーザー指定のパターン: ky|kw|sy|sh|sw|ty|th|ts|tw|cy|ch|ny|hy|hw|fy|my|ry|wy|gy|zy|dy|dh|by|py|ly|lw|xy|xw|xn|z,|z.|z/
-            // これらをグループ化して単語の先頭(\b)にマッチさせます。
-            const patterns = [
+            // 2. 削除パターンの定義
+            // A. 単語の先頭にマッチするパターン (既存のリスト)
+            const startingPatterns = [
                 'ky', 'kw', 'sy', 'sh', 'sw', 'ty', 'th', 'ts', 'tw', 'cy', 'ch',
                 'ny', 'hy', 'hw', 'fy', 'my', 'ry', 'wy', 'gy', 'zy', 'dy', 'dh',
                 'by', 'py', 'ly', 'lw', 'xy', 'xw', 'xn'
-            ].join('|'); // パターンを '|' で結合
+            ].join('|');
+            
+            // B. 単語内のどこかに含まれるパターン（新機能のトリガー）
+            const containingPatterns = ['zh', 'zj', 'zk', 'zl'];
+            const containingRegex = new RegExp('(' + containingPatterns.join('|') + ')', 'gi');
 
-            // 3. 正規表現の作成
-            // \b: 単語の境界 (英数字、アンダースコアの区切り)
-            // (${patterns}): 定義されたパターンのいずれかにマッチ
-            // \w*: パターンの後に続く英数字、アンダースコアをすべて含む
-            // /g: グローバル検索（行内のすべてにマッチ）
-            // /i: 大文字・小文字を区別しない（ここではローマ字を想定しているため含めています）
-            const regex = new RegExp('\\b(' + patterns + ')\\w*', 'gi');
+            // C. 最初の削除処理用の正規表現 (単語の先頭)
+            // \b(パターン)\w* にマッチ
+            const startingRegex = new RegExp('\\b(' + startingPatterns + ')\\w*', 'gi');
 
-            // 4. テキストを行ごとに処理
-            // \n: 改行文字で分割し、行の配列を作成
+            // 3. テキストを行ごとに処理
             const lines = originalText.split('\n');
+            let shouldEmptyLine = false; // 行を空にするかどうかのフラグ
 
             const processedLines = lines.map(line => {
-                // 各行に対して正規表現による置換を実行
-                // マッチした単語を空文字列('')に置換します。
-                return line.replace(regex, '');
+                // A. フラグをリセット
+                shouldEmptyLine = false; 
+
+                // B. 最初に、単語の先頭にマッチするパターンを削除
+                let processedLine = line.replace(startingRegex, '');
+
+                // C. 「zh, zj, zk, zl」を含む単語を検索・削除
+                // この削除を行う前に、該当パターンがあるかチェックしフラグを立てる
+                
+                // 行内で、containingPatternsを含む単語があるかをチェック
+                // このチェックには単語の境界(\b)と\w*が必要です
+                const removalTriggerRegex = new RegExp('\\b\\w*(' + containingPatterns.join('|') + ')\\w*\\b', 'gi');
+                
+                if (removalTriggerRegex.test(processedLine)) {
+                    // もしトリガーパターンを含む単語があれば、行を空にするフラグを立てる
+                    shouldEmptyLine = true;
+                    // その後、行全体から該当の単語を削除
+                    processedLine = processedLine.replace(removalTriggerRegex, '');
+                }
+
+                // D. 最終的な行の内容を決定
+                if (shouldEmptyLine) {
+                    // フラグが立っていたら、行全体を空文字列にする（行数保持）
+                    return ''; 
+                } else {
+                    // フラグが立っていなければ、部分削除後の行を返す
+                    return processedLine;
+                }
             });
 
-            // 5. 結果の結合と出力
-            // 処理後の行の配列を \n で結合し直し、行数を保ちます
+            // 4. 結果の結合と出力
             const resultText = processedLines.join('\n');
             outputTextarea.value = resultText;
         }
