@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>単語削除ツール</title>
+    <style>
+        /* 簡単なスタイリング */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            margin-bottom: 10px;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>📝 特定の単語を削除（行保持）</h1>
+    <p>指定されたパターンで始まる単語を削除し、元の行数を保ちます。</p>
+
+    <label for="inputText">入力テキスト:</label>
+    <textarea id="inputText" placeholder="ここにテキストを入力してください..."></textarea>
+
+    <button onclick="processText()">単語を削除して処理</button>
+
+    <label for="outputText">出力結果:</label>
+    <textarea id="outputText" readonly placeholder="処理結果がここに表示されます..."></textarea>
+
+    <script>
+        /**
+         * テキストを処理し、指定されたパターンで始まる単語を削除します。
+         */
+        function processText() {
+            // 1. 要素の取得
+            const inputTextarea = document.getElementById('inputText');
+            const outputTextarea = document.getElementById('outputText');
+            const originalText = inputTextarea.value;
+
+            // 2. 削除するパターンの定義
+            // ユーザー指定のパターン: ky|kw|sy|sh|sw|ty|th|ts|tw|cy|ch|ny|hy|hw|fy|my|ry|wy|gy|zy|dy|dh|by|py|ly|lw|xy|xw|xn|z,|z.|z/
+            // これらをグループ化して単語の先頭(\b)にマッチさせます。
+            const patterns = [
+                'ky', 'kw', 'sy', 'sh', 'sw', 'ty', 'th', 'ts', 'tw', 'cy', 'ch',
+                'ny', 'hy', 'hw', 'fy', 'my', 'ry', 'wy', 'gy', 'zy', 'dy', 'dh',
+                'by', 'py', 'ly', 'lw', 'xy', 'xw', 'xn', 'z,', 'z.', 'z/'
+            ].join('|'); // パターンを '|' で結合
+
+            // 3. 正規表現の作成
+            // \b: 単語の境界 (英数字、アンダースコアの区切り)
+            // (${patterns}): 定義されたパターンのいずれかにマッチ
+            // \w*: パターンの後に続く英数字、アンダースコアをすべて含む
+            // /g: グローバル検索（行内のすべてにマッチ）
+            // /i: 大文字・小文字を区別しない（ここではローマ字を想定しているため含めています）
+            const regex = new RegExp('\\b(' + patterns + ')\\w*', 'gi');
+
+            // 4. テキストを行ごとに処理
+            // \n: 改行文字で分割し、行の配列を作成
+            const lines = originalText.split('\n');
+
+            const processedLines = lines.map(line => {
+                // 各行に対して正規表現による置換を実行
+                // マッチした単語を空文字列('')に置換します。
+                return line.replace(regex, '');
+            });
+
+            // 5. 結果の結合と出力
+            // 処理後の行の配列を \n で結合し直し、行数を保ちます
+            const resultText = processedLines.join('\n');
+            outputTextarea.value = resultText;
+        }
+    </script>
+
+</body>
+</html>
